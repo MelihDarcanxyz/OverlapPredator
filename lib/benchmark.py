@@ -11,7 +11,7 @@ from collections import defaultdict
 import nibabel.quaternions as nq
 
 def rotation_error(R1, R2):
-    """
+    r"""
     Torch batch implementation of the rotation error between the estimated and the ground truth rotatiom matrix. 
     Rotation error is defined as r_e = \arccos(\frac{Trace(\mathbf{R}_{ij}^{T}\mathbf{R}_{ij}^{\mathrm{GT}) - 1}{2})
 
@@ -37,7 +37,7 @@ def rotation_error(R1, R2):
 
 
 def translation_error(t1, t2):
-    """
+    r"""
     Torch batch implementation of the rotation error between the estimated and the ground truth rotatiom matrix. 
     Rotation error is defined as r_e = \arccos(\frac{Trace(\mathbf{R}_{ij}^{T}\mathbf{R}_{ij}^{\mathrm{GT}) - 1}{2})
 
