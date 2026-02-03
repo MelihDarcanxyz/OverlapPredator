@@ -2,13 +2,14 @@ import math
 from typing import Dict, List
 
 import numpy as np
-from scipy.spatial.transform import Rotation
-from scipy.stats import special_ortho_group
 import torch
 import torch.utils.data
+from scipy.spatial.transform import Rotation
+from scipy.stats import special_ortho_group
 
 import common.math.se3 as se3
 import common.math.so3 as so3
+
 
 def uniform_2_sphere(num: int = None):
     """Uniform sampling on a 2-sphere
@@ -37,16 +38,18 @@ def uniform_2_sphere(num: int = None):
 
     return np.stack((x, y, z), axis=-1)
 
+
 class SplitSourceRef:
     """Clones the point cloud into separate source and reference point clouds"""
+
     def __call__(self, sample: Dict):
-        sample['points_raw'] = sample.pop('points')
-        if isinstance(sample['points_raw'], torch.Tensor):
-            sample['points_src'] = sample['points_raw'].detach()
-            sample['points_ref'] = sample['points_raw'].detach()
+        sample["points_raw"] = sample.pop("points")
+        if isinstance(sample["points_raw"], torch.Tensor):
+            sample["points_src"] = sample["points_raw"].detach()
+            sample["points_ref"] = sample["points_raw"].detach()
         else:  # is numpy
-            sample['points_src'] = sample['points_raw'].copy()
-            sample['points_ref'] = sample['points_raw'].copy()
+            sample["points_src"] = sample["points_raw"].copy()
+            sample["points_ref"] = sample["points_raw"].copy()
 
         return sample
 
@@ -65,28 +68,27 @@ class Resampler:
         self.num = num
 
     def __call__(self, sample):
+        if "deterministic" in sample and sample["deterministic"]:
+            np.random.seed(sample["idx"])
 
-        if 'deterministic' in sample and sample['deterministic']:
-            np.random.seed(sample['idx'])
-
-        if 'points' in sample:
-            sample['points'] = self._resample(sample['points'], self.num)
+        if "points" in sample:
+            sample["points"] = self._resample(sample["points"], self.num)
         else:
-            if 'crop_proportion' not in sample:
+            if "crop_proportion" not in sample:
                 src_size, ref_size = self.num, self.num
-            elif len(sample['crop_proportion']) == 1:
-                src_size = math.ceil(sample['crop_proportion'][0] * self.num)
+            elif len(sample["crop_proportion"]) == 1:
+                src_size = math.ceil(sample["crop_proportion"][0] * self.num)
                 ref_size = self.num
-            elif len(sample['crop_proportion']) == 2:
-                src_size = math.ceil(sample['crop_proportion'][0] * self.num)
-                ref_size = math.ceil(sample['crop_proportion'][1] * self.num)
+            elif len(sample["crop_proportion"]) == 2:
+                src_size = math.ceil(sample["crop_proportion"][0] * self.num)
+                ref_size = math.ceil(sample["crop_proportion"][1] * self.num)
                 src_size = 717
                 ref_size = 717
             else:
-                raise ValueError('Crop proportion must have 1 or 2 elements')
+                raise ValueError("Crop proportion must have 1 or 2 elements")
 
-            sample['points_src'] = self._resample(sample['points_src'], src_size)
-            sample['points_ref'] = self._resample(sample['points_ref'], ref_size)
+            sample["points_src"] = self._resample(sample["points_src"], src_size)
+            sample["points_ref"] = self._resample(sample["points_ref"], ref_size)
 
         return sample
 
@@ -106,8 +108,14 @@ class Resampler:
         elif points.shape[0] == k:
             return points
         else:
-            rand_idxs = np.concatenate([np.random.choice(points.shape[0], points.shape[0], replace=False),
-                                        np.random.choice(points.shape[0], k - points.shape[0], replace=True)])
+            rand_idxs = np.concatenate(
+                [
+                    np.random.choice(points.shape[0], points.shape[0], replace=False),
+                    np.random.choice(
+                        points.shape[0], k - points.shape[0], replace=True
+                    ),
+                ]
+            )
             return points[rand_idxs, :]
 
 
@@ -115,36 +123,41 @@ class FixedResampler(Resampler):
     """Fixed resampling to always choose the first N points.
     Always deterministic regardless of whether the deterministic flag has been set
     """
+
     @staticmethod
     def _resample(points, k):
         multiple = k // points.shape[0]
         remainder = k % points.shape[0]
 
-        resampled = np.concatenate((np.tile(points, (multiple, 1)), points[:remainder, :]), axis=0)
+        resampled = np.concatenate(
+            (np.tile(points, (multiple, 1)), points[:remainder, :]), axis=0
+        )
         return resampled
 
 
 class RandomJitter:
-    """ generate perturbations """
+    """generate perturbations"""
+
     def __init__(self, scale=0.01, clip=0.05):
         self.scale = scale
         self.clip = clip
 
     def jitter(self, pts):
-
-        noise = np.clip(np.random.normal(0.0, scale=self.scale, size=(pts.shape[0], 3)),
-                        a_min=-self.clip, a_max=self.clip)
+        noise = np.clip(
+            np.random.normal(0.0, scale=self.scale, size=(pts.shape[0], 3)),
+            a_min=-self.clip,
+            a_max=self.clip,
+        )
         pts[:, :3] += noise  # Add noise to xyz
 
         return pts
 
     def __call__(self, sample):
-
-        if 'points' in sample:
-            sample['points'] = self.jitter(sample['points'])
+        if "points" in sample:
+            sample["points"] = self.jitter(sample["points"])
         else:
-            sample['points_src'] = self.jitter(sample['points_src'])
-            sample['points_ref'] = self.jitter(sample['points_ref'])
+            sample["points_src"] = self.jitter(sample["points_src"])
+            sample["points_ref"] = self.jitter(sample["points_ref"])
 
         return sample
 
@@ -156,6 +169,7 @@ class RandomCrop:
     half-space oriented in this direction.
     If p_keep != 0.5, we shift the plane until approximately p_keep points are retained
     """
+
     def __init__(self, p_keep: List = None):
         if p_keep is None:
             p_keep = [0.7, 0.7]  # Crop both clouds to 70%
@@ -171,29 +185,32 @@ class RandomCrop:
         if p_keep == 0.5:
             mask = dist_from_plane > 0
         else:
-            mask = dist_from_plane > np.percentile(dist_from_plane, (1.0 - p_keep) * 100)
+            mask = dist_from_plane > np.percentile(
+                dist_from_plane, (1.0 - p_keep) * 100
+            )
 
         return points[mask, :]
 
     def __call__(self, sample):
-
-        sample['crop_proportion'] = self.p_keep
+        sample["crop_proportion"] = self.p_keep
         if np.all(self.p_keep == 1.0):
             return sample  # No need crop
 
-        if 'deterministic' in sample and sample['deterministic']:
-            np.random.seed(sample['idx'])
+        if "deterministic" in sample and sample["deterministic"]:
+            np.random.seed(sample["idx"])
 
         if len(self.p_keep) == 1:
-            sample['points_src'] = self.crop(sample['points_src'], self.p_keep[0])
+            sample["points_src"] = self.crop(sample["points_src"], self.p_keep[0])
         else:
-            sample['points_src'] = self.crop(sample['points_src'], self.p_keep[0])
-            sample['points_ref'] = self.crop(sample['points_ref'], self.p_keep[1])
+            sample["points_src"] = self.crop(sample["points_src"], self.p_keep[0])
+            sample["points_ref"] = self.crop(sample["points_ref"], self.p_keep[1])
         return sample
 
 
 class RandomTransformSE3:
-    def __init__(self, rot_mag: float = 180.0, trans_mag: float = 1.0, random_mag: bool = False):
+    def __init__(
+        self, rot_mag: float = 180.0, trans_mag: float = 1.0, random_mag: bool = False
+    ):
         """Applies a random rigid transformation to the source point cloud
 
         Args:
@@ -208,11 +225,14 @@ class RandomTransformSE3:
         self._random_mag = random_mag
 
     def generate_transform(self):
-        """Generate a random SE3 transformation (3, 4) """
+        """Generate a random SE3 transformation (3, 4)"""
 
         if self._random_mag:
             attentuation = np.random.random()
-            rot_mag, trans_mag = attentuation * self._rot_mag, attentuation * self._trans_mag
+            rot_mag, trans_mag = (
+                attentuation * self._rot_mag,
+                attentuation * self._trans_mag,
+            )
         else:
             rot_mag, trans_mag = self._rot_mag, self._trans_mag
 
@@ -224,7 +244,9 @@ class RandomTransformSE3:
 
         # Generate translation
         rand_trans = np.random.uniform(-trans_mag, trans_mag, 3)
-        rand_SE3 = np.concatenate((rand_rot, rand_trans[:, None]), axis=1).astype(np.float32)
+        rand_SE3 = np.concatenate((rand_rot, rand_trans[:, None]), axis=1).astype(
+            np.float32
+        )
 
         return rand_SE3
 
@@ -244,16 +266,17 @@ class RandomTransformSE3:
         return self.apply_transform(tensor, transform_mat)
 
     def __call__(self, sample):
+        if "deterministic" in sample and sample["deterministic"]:
+            np.random.seed(sample["idx"])
 
-        if 'deterministic' in sample and sample['deterministic']:
-            np.random.seed(sample['idx'])
-
-        if 'points' in sample:
-            sample['points'], _, _ = self.transform(sample['points'])
+        if "points" in sample:
+            sample["points"], _, _ = self.transform(sample["points"])
         else:
-            src_transformed, transform_r_s, transform_s_r = self.transform(sample['points_src'])
-            sample['transform_gt'] = transform_r_s  # Apply to source to get reference
-            sample['points_src'] = src_transformed
+            src_transformed, transform_r_s, transform_s_r = self.transform(
+                sample["points_src"]
+            )
+            sample["transform_gt"] = transform_r_s  # Apply to source to get reference
+            sample["points_src"] = src_transformed
 
         return sample
 
@@ -266,11 +289,14 @@ class RandomTransformSE3_euler(RandomTransformSE3):
     generate uniform rotations
 
     """
-    def generate_transform(self):
 
+    def generate_transform(self):
         if self._random_mag:
             attentuation = np.random.random()
-            rot_mag, trans_mag = attentuation * self._rot_mag, attentuation * self._trans_mag
+            rot_mag, trans_mag = (
+                attentuation * self._rot_mag,
+                attentuation * self._trans_mag,
+            )
         else:
             rot_mag, trans_mag = self._rot_mag, self._trans_mag
 
@@ -285,15 +311,9 @@ class RandomTransformSE3_euler(RandomTransformSE3):
         sinx = np.sin(anglex)
         siny = np.sin(angley)
         sinz = np.sin(anglez)
-        Rx = np.array([[1, 0, 0],
-                       [0, cosx, -sinx],
-                       [0, sinx, cosx]])
-        Ry = np.array([[cosy, 0, siny],
-                       [0, 1, 0],
-                       [-siny, 0, cosy]])
-        Rz = np.array([[cosz, -sinz, 0],
-                       [sinz, cosz, 0],
-                       [0, 0, 1]])
+        Rx = np.array([[1, 0, 0], [0, cosx, -sinx], [0, sinx, cosx]])
+        Ry = np.array([[cosy, 0, siny], [0, 1, 0], [-siny, 0, cosy]])
+        Rz = np.array([[cosz, -sinz, 0], [sinz, cosz, 0], [0, 0, 1]])
         R_ab = Rx @ Ry @ Rz
         t_ab = np.random.uniform(-trans_mag, trans_mag, 3)
 
@@ -308,64 +328,84 @@ class RandomRotatorZ(RandomTransformSE3):
         super().__init__(rot_mag=360)
 
     def generate_transform(self):
-        """Generate a random SE3 transformation (3, 4) """
+        """Generate a random SE3 transformation (3, 4)"""
 
         rand_rot_deg = np.random.random() * self._rot_mag
-        rand_rot = Rotation.from_euler('z', rand_rot_deg, degrees=True).as_dcm()
-        rand_SE3 = np.pad(rand_rot, ((0, 0), (0, 1)), mode='constant').astype(np.float32)
+        rand_rot = Rotation.from_euler("z", rand_rot_deg, degrees=True).as_dcm()
+        rand_SE3 = np.pad(rand_rot, ((0, 0), (0, 1)), mode="constant").astype(
+            np.float32
+        )
 
         return rand_SE3
 
 
 class ShufflePoints:
     """Shuffles the order of the points"""
+
     def __call__(self, sample):
-        if 'points' in sample:
-            sample['points'] = np.random.permutation(sample['points'])
+        if "points" in sample:
+            sample["points"] = np.random.permutation(sample["points"])
         else:
-            sample['points_ref'] = np.random.permutation(sample['points_ref'])
-            sample['points_src'] = np.random.permutation(sample['points_src'])
+            sample["points_ref"] = np.random.permutation(sample["points_ref"])
+            sample["points_src"] = np.random.permutation(sample["points_src"])
         return sample
 
 
 class SetDeterministic:
     """Adds a deterministic flag to the sample such that subsequent transforms
     use a fixed random seed where applicable. Used for test"""
+
     def __call__(self, sample):
-        sample['deterministic'] = True
+        sample["deterministic"] = True
         return sample
 
 
 class Dict2DcpList:
     """Converts dictionary of tensors into a list of tensors compatible with Deep Closest Point"""
+
     def __call__(self, sample):
+        target = sample["points_src"][:, :3].transpose().copy()
+        src = sample["points_ref"][:, :3].transpose().copy()
 
-        target = sample['points_src'][:, :3].transpose().copy()
-        src = sample['points_ref'][:, :3].transpose().copy()
+        rotation_ab = sample["transform_gt"][:3, :3].transpose().copy()
+        translation_ab = -rotation_ab @ sample["transform_gt"][:3, 3].copy()
 
-        rotation_ab = sample['transform_gt'][:3, :3].transpose().copy()
-        translation_ab = -rotation_ab @ sample['transform_gt'][:3, 3].copy()
+        rotation_ba = sample["transform_gt"][:3, :3].copy()
+        translation_ba = sample["transform_gt"][:3, 3].copy()
 
-        rotation_ba = sample['transform_gt'][:3, :3].copy()
-        translation_ba = sample['transform_gt'][:3, 3].copy()
+        euler_ab = Rotation.from_dcm(rotation_ab).as_euler("zyx").copy()
+        euler_ba = Rotation.from_dcm(rotation_ba).as_euler("xyz").copy()
 
-        euler_ab = Rotation.from_dcm(rotation_ab).as_euler('zyx').copy()
-        euler_ba = Rotation.from_dcm(rotation_ba).as_euler('xyz').copy()
-
-        return src, target, \
-               rotation_ab, translation_ab, rotation_ba, translation_ba, \
-               euler_ab, euler_ba
+        return (
+            src,
+            target,
+            rotation_ab,
+            translation_ab,
+            rotation_ba,
+            translation_ba,
+            euler_ab,
+            euler_ba,
+        )
 
 
 class Dict2PointnetLKList:
     """Converts dictionary of tensors into a list of tensors compatible with PointNet LK"""
-    def __call__(self, sample):
 
-        if 'points' in sample:
+    def __call__(self, sample):
+        if "points" in sample:
             # Train Classifier (pretraining)
-            return sample['points'][:, :3], sample['label']
+            return sample["points"][:, :3], sample["label"]
         else:
             # Train PointNetLK
-            transform_gt_4x4 = np.concatenate([sample['transform_gt'],
-                                               np.array([[0.0, 0.0, 0.0, 1.0]], dtype=np.float32)], axis=0)
-            return sample['points_src'][:, :3], sample['points_ref'][:, :3], transform_gt_4x4
+            transform_gt_4x4 = np.concatenate(
+                [
+                    sample["transform_gt"],
+                    np.array([[0.0, 0.0, 0.0, 1.0]], dtype=np.float32),
+                ],
+                axis=0,
+            )
+            return (
+                sample["points_src"][:, :3],
+                sample["points_ref"][:, :3],
+                transform_gt_4x4,
+            )

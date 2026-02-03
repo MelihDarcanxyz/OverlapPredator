@@ -1,4 +1,5 @@
 """Functions for random sampling"""
+
 import numpy as np
 
 
@@ -30,8 +31,9 @@ def uniform_2_sphere(num: int = None):
     return np.stack((x, y, z), axis=-1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Visualize sampling
     from vtk_visualizer.plot3d import plotxyz
+
     rand_2s = uniform_2_sphere(10000)
     plotxyz(rand_2s, block=True)

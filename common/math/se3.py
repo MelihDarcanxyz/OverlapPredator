@@ -7,7 +7,7 @@ def identity():
 
 
 def transform(g: np.ndarray, pts: np.ndarray):
-    """ Applies the SE3 transform
+    """Applies the SE3 transform
 
     Args:
         g: SE3 transformation matrix of size ([B,] 3/4, 4)
@@ -39,13 +39,15 @@ def inverse(g: np.ndarray):
     inv_rot = np.swapaxes(rot, -1, -2)
     inverse_transform = np.concatenate([inv_rot, inv_rot @ -trans[..., None]], axis=-1)
     if g.shape[-2] == 4:
-        inverse_transform = np.concatenate([inverse_transform, [[0.0, 0.0, 0.0, 1.0]]], axis=-2)
+        inverse_transform = np.concatenate(
+            [inverse_transform, [[0.0, 0.0, 0.0, 1.0]]], axis=-2
+        )
 
     return inverse_transform
 
 
 def concatenate(a: np.ndarray, b: np.ndarray):
-    """ Concatenate two SE3 transforms
+    """Concatenate two SE3 transforms
 
     Args:
         a: First transform ([B,] 3/4, 4)

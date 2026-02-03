@@ -6,7 +6,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 
 
-def dcm2euler(mats: np.ndarray, seq: str = 'zyx', degrees: bool = True):
+def dcm2euler(mats: np.ndarray, seq: str = "zyx", degrees: bool = True):
     """Converts rotation matrix to euler angles
 
     Args:
@@ -26,7 +26,7 @@ def dcm2euler(mats: np.ndarray, seq: str = 'zyx', degrees: bool = True):
 
 
 def transform(g: np.ndarray, pts: np.ndarray):
-    """ Applies the SO3 transform
+    """Applies the SO3 transform
 
     Args:
         g: SO3 transformation matrix of size (3, 3)
