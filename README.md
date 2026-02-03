@@ -37,10 +37,13 @@ This code has been tested on
 ### Requirements
 To create a virtual environment and install the required dependences please run:
 ```shell
-git clone https://github.com/overlappredator/OverlapPredator.git
-virtualenv predator; source predator/bin/activate
-cd OverlapPredator; pip install -r requirements.txt
-cd cpp_wrappers; sh compile_wrappers.sh; cd ..
+git clone https://github.com/MelihDarcanxyz/OverlapPredator.git predator
+cd predator
+conda env create -f environment.yml
+conda activate predator
+cd cpp_wrappers
+sh compile_wrappers.sh
+cd ..
 ```
 in your working folder.
 
