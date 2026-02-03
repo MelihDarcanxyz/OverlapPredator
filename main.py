@@ -25,7 +25,7 @@ if __name__ == "__main__":
     config = load_config(args.config)
     datetime_now = datetime.now()
     datetime_now_str = datetime_now.strftime(r"%Y-%m-%dT%H-%M-%S")
-    exp_dir = f"{config['exp_dir']}/{datetime_now_str}"
+    exp_dir = exp_dir = f"{config['exp_dir']}/{config['mode']}-{datetime_now_str}"
 
     config["snapshot_dir"] = f"snapshot/{exp_dir}"
     config["tboard_dir"] = f"snapshot/{exp_dir}/tensorboard"
