@@ -54,7 +54,7 @@ class Trainer(object):
         with open(f'{args.snapshot_dir}/model','w') as f:
             f.write(str(self.model))
         f.close()
- 
+
     def _snapshot(self, epoch, name=None):
         state = {
             'epoch': epoch,
@@ -215,7 +215,7 @@ class Trainer(object):
                 for key, value in stats_meter.items():
                     self.writer.add_scalar(f'{phase}/{key}', value.avg, curr_iter)
                 
-                message = f'{phase} Epoch: {epoch} [{c_iter+1:4d}/{num_iter}]'
+                message = f'{phase} Epoch: {epoch} [{c_iter+1:4d}/{num_iter}] '
                 for key,value in stats_meter.items():
                     message += f'{key}: {value.avg:.2f}\t'
 
