@@ -1,11 +1,11 @@
 misc:
-  exp_dir: indoor
-  mode: train
+  exp_dir: 3dlomatch
+  mode: test
   gpu_mode: True
   verbose: True
   verbose_freq: 1000
   snapshot_freq: 1
-  pretrain: ''
+  pretrain: 'weights/indoor.pth'
 
 
 model:
@@ -30,7 +30,7 @@ model:
   condition_feature: True
 
 overlap_attention_module:
-  gnn_feats_dim: 256
+  gnn_feats_dim: 256 
   dgcnn_k: 10
   num_head: 4
   nets: ['self','cross','self']
@@ -61,7 +61,7 @@ optimiser:
 
 dataset:
   dataset: indoor
-  benchmark: 3DMatch
+  benchmark: 3DLoMatch
   root: data/indoor
   batch_size: 1 
   num_workers: 6 
