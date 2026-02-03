@@ -102,7 +102,7 @@ dependent on ```n_points``` used by RANSAC, this might take a few minutes. The f
 #### Demo
 We prepared a small demo, which demonstrates the whole Predator pipeline using two random fragments from the 3DMatch dataset. To carry out the demo, please run:
 ```shell
-python scripts/demo.py configs/test/indoor.yaml
+XDG_SESSION_TYPE=x11 python scripts/demo.py configs/test/indoor.yaml
 ```
 
 The demo script will visualize input point clouds, inferred overlap regions, and point cloud aligned with the estimated transformation parameters:
