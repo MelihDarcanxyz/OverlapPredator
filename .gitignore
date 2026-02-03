@@ -23,7 +23,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/ # Does not apply to PREDATOR folder structure
 lib64/
 parts/
 sdist/
