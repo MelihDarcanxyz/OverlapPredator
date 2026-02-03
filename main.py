@@ -23,9 +23,13 @@ if __name__ == "__main__":
     parser.add_argument("config", type=str, help="Path to the config file.")
     args = parser.parse_args()
     config = load_config(args.config)
-    config["snapshot_dir"] = "snapshot/%s" % config["exp_dir"]
-    config["tboard_dir"] = "snapshot/%s/tensorboard" % config["exp_dir"]
-    config["save_dir"] = "snapshot/%s/checkpoints" % config["exp_dir"]
+    datetime_now = datetime.now()
+    datetime_now_str = datetime_now.strftime(r"%Y-%m-%dT%H-%M-%S")
+    exp_dir = f"{config['exp_dir']}/{datetime_now_str}"
+
+    config["snapshot_dir"] = f"snapshot/{exp_dir}"
+    config["tboard_dir"] = f"snapshot/{exp_dir}/tensorboard"
+    config["save_dir"] = f"snapshot/{exp_dir}/checkpoints"
     config = edict(config)
 
     os.makedirs(config.snapshot_dir, exist_ok=True)
