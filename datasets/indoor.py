@@ -43,8 +43,8 @@ class IndoorDataset(Dataset):
         # get pointcloud
         src_path=os.path.join(self.base_dir,self.infos['src'][item])
         tgt_path=os.path.join(self.base_dir,self.infos['tgt'][item])
-        src_pcd = torch.load(src_path)
-        tgt_pcd = torch.load(tgt_path)
+        src_pcd = torch.load(src_path, weights_only=False)
+        tgt_pcd = torch.load(tgt_path, weights_only=False)
 
         # if we get too many points, we do some downsampling
         if(src_pcd.shape[0] > self.max_points):

@@ -44,8 +44,8 @@ class ThreeDMatchDemo(Dataset):
 
     def __getitem__(self,item): 
         # get pointcloud
-        src_pcd = torch.load(self.src_path).astype(np.float32)
-        tgt_pcd = torch.load(self.tgt_path).astype(np.float32)   
+        src_pcd = torch.load(self.src_path, weights_only=False).astype(np.float32)
+        tgt_pcd = torch.load(self.tgt_path, weights_only=False).astype(np.float32)   
         
         
         #src_pcd = o3d.io.read_point_cloud(self.src_path)
@@ -145,7 +145,7 @@ def main(config, demo_loader):
     config.model.eval()
     c_loader_iter = demo_loader.__iter__()
     with torch.no_grad():
-        inputs = c_loader_iter.next()
+        inputs = next(c_loader_iter)
         ##################################
         # load inputs to device.
         for k, v in inputs.items():  
