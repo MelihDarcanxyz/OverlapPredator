@@ -231,7 +231,7 @@ class Trainer(object):
 
     def train(self):
         print('start training...')
-        for epoch in range(self.start_epoch, self.max_epoch):
+        for epoch in range(self.start_epoch - 1, self.max_epoch):
             self.inference_one_epoch(epoch,'train')
             self.scheduler.step()
             
